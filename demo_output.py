@@ -1,4 +1,4 @@
-DEMO_RED_OUTPUT = """# Red/Threat Simulation: T1059.001 - PowerShell
+DEMO_RED_OUTPUT = r"""# Red/Threat Simulation: T1059.001 - PowerShell
 
 ## Purple-Team Context
 Authorized purple-team validation for PowerShell abuse (T1059.001) in a Windows enterprise environment.
@@ -371,7 +371,7 @@ gap that most single-host Sigma rules leave open.
 ```
 """
 
-DEMO_BLUE_OUTPUT = """# Detection Report: T1059.001
+DEMO_BLUE_OUTPUT = r"""# Detection Report: T1059.001
 
 ## Detection Strategy
 This layered detection converts the Red Agent's high-fidelity PowerShell simulation into three correlated
@@ -555,9 +555,70 @@ selections are unavailable — fall back to proxy logs for staging network visib
 9. Detection Hardening Backlog: Enable 4104 fleet-wide, add DNS-based staging detection, implement WinRM source-to-target cross-host correlation rule.
 """
 
-DEMO_RESPONSE_OUTPUT = """"""
+DEMO_RESPONSE_OUTPUT = r"""## Response Guidance
 
-DEMO_VERIFIER_OUTPUT = """```json
+1. Triage:
+   - Confirm whether the alert is part of an authorized purple-team validation window.
+   - Review the complete process lineage for Office-spawned PowerShell activity, especially parent-child chains such as WINWORD.EXE or EXCEL.EXE launching powershell.exe.
+   - Collect CommandLine, ParentImage, Image, User, AccountName, Hostname, ProcessGuid, ProcessId, EventID, ScriptBlockText, TargetFilename, DestinationHostname, DestinationIp, and DestinationPort.
+   - Prioritize hosts where PowerShell telemetry includes -EncodedCommand, -ExecutionPolicy Bypass, -WindowStyle Hidden, -NoProfile, -NonInteractive, Invoke-Expression, DownloadString, or Net.WebClient.
+   - Validate whether related Sysmon Event ID 1, 3, 11, 22, Windows Security Event ID 4688, and PowerShell 4103/4104 events occurred within the same correlation window.
+
+2. Containment:
+   - If the activity is not part of the authorized validation, isolate the affected endpoint through EDR.
+   - Disable or reset the affected user account if suspicious authentication, privilege-use, or lateral-movement indicators are present.
+   - Block suspicious staging domains, URL paths, destination IPs, and ports identified in the network telemetry.
+   - Preserve volatile evidence before remediation, including process trees, command lines, script block logs, network connections, and relevant file artifacts.
+   - For strong correlation between Office lineage, encoded PowerShell, script block telemetry, and network callouts, treat the case as high-confidence suspicious execution.
+
+3. Hunt Follow-up:
+   - Search across the environment for the same PowerShell command-line flags and parent-child process lineage.
+   - Pivot on ProcessGuid, ParentProcessGuid, User, AccountName, Hostname, DestinationHostname, DestinationIp, TargetFilename, and ScriptBlockText.
+   - Hunt for similar Office-to-script-interpreter chains across WINWORD.EXE, EXCEL.EXE, POWERPNT.EXE, OUTLOOK.EXE, and other macro-capable applications.
+   - Review Sysmon Event ID 3 network connections from powershell.exe and correlate them with DNS events such as Sysmon Event ID 22.
+   - Review authentication telemetry for suspicious LogonType 3 activity, especially when it follows PowerShell execution or WinRM-related traffic.
+   - Investigate wsmprovhost.exe, winrm activity, and port 5985/5986 connections as possible lateral-movement follow-up indicators.
+
+4. Mitigation:
+   - Enable and verify PowerShell Script Block Logging, Module Logging, and Transcription where appropriate.
+   - Enforce Windows process creation logging with command line capture.
+   - Deploy or validate Sysmon coverage for process creation, network connections, file creation, and DNS queries.
+   - Apply Attack Surface Reduction controls for Office child process creation where operationally feasible.
+   - Restrict unnecessary PowerShell execution from user-writable directories and temporary paths.
+   - Tune the Sigma/SIEM logic to require both primary signals and corroborating context where possible.
+
+5. Escalation Criteria:
+   - Escalate immediately if the activity is not authorized and includes Office-spawned encoded PowerShell plus network staging behavior.
+   - Escalate if suspicious PowerShell execution is followed by authentication anomalies, WinRM activity, credential-access telemetry indicators, or lateral-movement patterns.
+   - Escalate if the same observable pattern appears across multiple hosts, users, or business units.
+   - Escalate if script block logs show suspicious command reconstruction, staging behavior, or execution from user-writable paths.
+
+6. Reporting Notes:
+   - Document the triggering observables, affected user, affected host, command line, process tree, timestamps, network destinations, and detection rule version.
+   - Record which signals were primary, corroborating, fallback, or missing.
+   - Include any production gaps, such as missing PowerShell logging, absent Sysmon DNS telemetry, or inability to correlate cross-host WinRM events.
+   - Separate authorized purple-team test activity from possible confirmed incident activity.
+
+7. Production Follow-up:
+   - Promote validated Sigma logic into the SIEM with environment-specific tuning.
+   - Add correlation rules that join process creation, PowerShell script block logs, DNS telemetry, network connections, and authentication events.
+   - Create suppression logic only for known administrative automation after owner validation.
+   - Schedule a follow-up validation run after tuning to confirm coverage and false-positive reduction.
+
+8. Demo Export Notes:
+   - Include this response guidance in the downloadable SOC readiness report.
+   - Link the response steps to the Sigma rule, Splunk SPL hunt query, VECTR-style export, and validation JSON.
+   - Show the validation scores as evidence that the generated defense package was checked for coverage, safety, and product readiness.
+
+9. Detection Hardening Backlog:
+   - Add cross-host SIEM correlation for WinRM source and target activity within a 30-second window.
+   - Add DNS-focused detection for suspicious staging domains and campaign-like URL paths.
+   - Add regex-supported detection for random-looking script names in user-writable paths where the SIEM backend supports regex.
+   - Enrich alerts with identity context, device ownership, user risk, and recent administrative activity.
+   - Add separate low-severity hunting rules for fallback indicators that are too noisy for high-confidence alerting alone.
+"""
+
+DEMO_VERIFIER_OUTPUT = r"""```json
 {
   "coverage_score": 97,
   "real_world_applicability_score": 95,

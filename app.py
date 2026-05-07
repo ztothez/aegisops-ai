@@ -10,8 +10,9 @@ from pathlib import Path
 from graph import app
 from demo_output import DEMO_INVOKE_RESULT
 from apt import get_apt_techniques, get_group_info
-from agents.llm import has_live_llm_config, live_health
+from agents.llm import has_live_llm_config, live_health, get_model_routing_status
 from topology import generate_attack_paths, generate_topology, score_path_detection
+
 
 PIPELINE_VERSION = "rocm-live-evidence-v1"
 ASSETS_DIR = Path(__file__).parent / "assets"
@@ -1433,9 +1434,74 @@ def _cached_live_health() -> dict:
     return dict(live_health(timeout_s=3.0))
 
 
+@st.cache_data(ttl=20, show_spinner=False)
+def _cached_model_routing_status() -> dict:
+    return dict(get_model_routing_status())
+
+
+def _model_routing_panel_html() -> str:
+    """Judge-visible Llama/Qwen hybrid model routing status."""
+    routing = _cached_model_routing_status()
+    mode = routing.get("model_mode", "llama")
+
+    primary = routing.get("primary", {}) or {}
+    qwen = routing.get("qwen", {}) or {}
+    routes = routing.get("routes", {}) or {}
+
+    primary_model = primary.get("model") or "not configured"
+    qwen_model = qwen.get("model") or "not configured"
+    qwen_configured = bool(qwen.get("configured"))
+    validator_route = routes.get("validator", "primary")
+
+    qwen_badge = "CONFIGURED" if qwen_configured else "FALLBACK"
+    qwen_color = "#8B5CF6" if qwen_configured else "#F59E0B"
+    validator_color = "#8B5CF6" if validator_route == "qwen" else "#3B82F6"
+
+    return f"""
+    <div style="background:#0B1020;border:1px solid #243044;border-radius:14px;padding:16px 18px;margin:14px 0 18px 0;
+                box-shadow:0 0 28px rgba(139,92,246,.08)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+        <div>
+          <div style="font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#8B5CF6;
+                      font-family:JetBrains Mono,monospace">MODEL ROUTING</div>
+          <div style="font-size:12px;color:#94A3B8;margin-top:4px;font-family:Inter,sans-serif">
+            Primary generation path plus optional Qwen validator route
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:800;color:#FCD34D;
+                       background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.45);border-radius:999px;padding:7px 10px">
+            MODE {html.escape(str(mode)).upper()}
+          </span>
+          <span style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:800;color:{qwen_color};
+                       background:rgba(139,92,246,.10);border:1px solid {qwen_color};border-radius:999px;padding:7px 10px">
+            QWEN {qwen_badge}
+          </span>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
+        <div style="background:#111827;border:1px solid #243044;border-top:3px solid #3B82F6;border-radius:10px;padding:12px">
+          <div style="font-size:10px;color:#64748B;font-family:JetBrains Mono,monospace;letter-spacing:.1em;text-transform:uppercase">Primary Generator</div>
+          <div style="font-size:13px;color:#E5E7EB;font-family:JetBrains Mono,monospace;margin-top:8px;word-break:break-word">{html.escape(str(primary_model))}</div>
+        </div>
+        <div style="background:#111827;border:1px solid #243044;border-top:3px solid #8B5CF6;border-radius:10px;padding:12px">
+          <div style="font-size:10px;color:#64748B;font-family:JetBrains Mono,monospace;letter-spacing:.1em;text-transform:uppercase">Validator Model</div>
+          <div style="font-size:13px;color:#E5E7EB;font-family:JetBrains Mono,monospace;margin-top:8px;word-break:break-word">{html.escape(str(qwen_model))}</div>
+        </div>
+        <div style="background:#111827;border:1px solid #243044;border-top:3px solid {validator_color};border-radius:10px;padding:12px">
+          <div style="font-size:10px;color:#64748B;font-family:JetBrains Mono,monospace;letter-spacing:.1em;text-transform:uppercase">Validation Agent Route</div>
+          <div style="font-size:13px;color:{validator_color};font-family:JetBrains Mono,monospace;margin-top:8px;font-weight:800">{html.escape(str(validator_route)).upper()}</div>
+        </div>
+      </div>
+    </div>
+    """
+
+
 def _render_top_panels(demo_mode: bool, mode_name: str) -> None:
-    """Render the per-mode header strip: status bar, ROCm/AMD evidence, originality."""
+    """Render the per-mode header strip: status bar, model routing, ROCm/AMD evidence, originality."""
     st.markdown(_status_bar_html(demo_mode, mode_name), unsafe_allow_html=True)
+    st.markdown(_model_routing_panel_html(), unsafe_allow_html=True)
     health = {} if demo_mode else _cached_live_health()
     st.markdown(_rocm_live_panel_html(demo_mode, health), unsafe_allow_html=True)
     _render_rocm_evidence_downloads()
