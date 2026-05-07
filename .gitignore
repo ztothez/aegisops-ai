@@ -108,3 +108,19 @@ Thumbs.db
 *.swo
 .idea/
 .vscode/settings.json
+
+# Archives / exported bundles
+*.zip
+
+# Temporary migration / patch helper files
+apply_ui_patch.py
+ui_template.py
+
+# Imported/generated design references
+Code/
+design_assets/
+assets/figma/
+
+# Local agent assistant docs
+frontend/AGENTS.md
+frontend/CLAUDE.md
