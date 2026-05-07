@@ -381,7 +381,7 @@ div[data-testid="stMetric"] [data-testid="stMetricDelta"] {
     border-radius:8px;
     padding:18px 22px;
     overflow:hidden;
-    min-height:166px;
+    min-height:190px;
     margin-bottom:12px;
 }
 .aegis-hero::before {
@@ -2472,11 +2472,7 @@ def _render_top_panels(demo_mode: bool, mode_name: str) -> None:
         render_readiness_gates_panel(demo_mode, health)
 
     metrics = (st.session_state.get("metrics") or {}).get("agents")
-    col_endpoint, col_agents = st.columns([0.78, 2.22], gap="medium")
-    with col_endpoint:
-        render_endpoint_mini_card(demo_mode, health)
-    with col_agents:
-        render_agent_pipeline_panel(demo_mode, health, metrics=metrics)
+    render_agent_pipeline_panel(demo_mode, health, metrics=metrics)
 
     # AMD/ROCm evidence downloads remain isolated to the Validation & AMD Proof tab.
     # Do not render them here too, or Streamlit creates duplicate download_button IDs.
