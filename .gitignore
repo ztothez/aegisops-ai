@@ -32,13 +32,6 @@ htmlcov/
 # Streamlit
 .streamlit/
 
-# MITRE ATT&CK data (large downloaded file, ~44MB)
-enterprise-attack.json
-
-# Local hardware benchmark data
-assets/rocm_smi.json
-assets/rocm_benchmark.json
-
 # Presentation decks
 *.pptx
 
