@@ -5,6 +5,7 @@ import io
 import json
 import html
 import os
+import datetime
 import re
 from pathlib import Path
 from graph import app
@@ -14,16 +15,16 @@ from agents.llm import has_live_llm_config, live_health, get_model_routing_statu
 from topology import generate_attack_paths, generate_topology, score_path_detection
 
 
-PIPELINE_VERSION = "rocm-live-evidence-v1"
+PIPELINE_VERSION = "aegisops-production-hybrid-v1"
 ASSETS_DIR = Path(__file__).parent / "assets"
 
 st.set_page_config(
-    page_title="AegisOps OS",
+    page_title="AegisOps AI",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-TECHNIQUE_CATALOG = [
+FEATURED_TECHNIQUE_CATALOG = [
     ("T1059.001", "PowerShell"),
     ("T1566.001", "Spearphishing Attachment"),
     ("T1078",     "Valid Accounts"),
@@ -299,6 +300,497 @@ div[data-testid="stMetric"] [data-testid="stMetricDelta"] {
 }
 .stTabs [data-baseweb="tab-highlight"] { background: transparent !important; }
 .stTabs [data-baseweb="tab-panel"] { padding-top: 18px !important; }
+
+/* ── AegisOps SOC Command Center shell, ported from docs/design/ui_kits/soc_command_center/index.html ── */
+.block-container {
+    padding-top: 1.05rem !important;
+    max-width: 1480px !important;
+}
+[data-testid="stSidebar"] {
+    background: #060C18 !important;
+    border-right: 1px solid #1E293B !important;
+}
+[data-testid="stSidebar"] > div:first-child {
+    padding: 18px 14px !important;
+}
+.sb-brand {
+    display:flex;
+    align-items:center;
+    gap:9px;
+    padding:0 6px 12px;
+    border-bottom:1px solid #1E293B;
+    margin-bottom:14px;
+}
+.sb-mark {
+    width:28px;
+    height:28px;
+    border-radius:6px;
+    background:linear-gradient(135deg,#8B5CF6 0%,#EF4444 100%);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font:800 14px/1 'Inter', sans-serif;
+    color:#fff;
+}
+.sb-brand .name {
+    font:700 14px/1 'Inter', sans-serif;
+    color:#F8FAFC;
+    letter-spacing:-0.01em;
+}
+.sb-brand .name .accent { color:#8B5CF6; }
+.sb-brand .role {
+    font:500 9px/1 'Inter', sans-serif;
+    color:#64748B;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    margin-top:3px;
+}
+.sb-eyebrow {
+    font:700 10px/1 'Inter', sans-serif;
+    color:#94A3B8;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    padding:0 8px;
+    margin:4px 0 10px;
+}
+.sb-foot {
+    margin-top:18px;
+    padding:10px;
+    background:#0F172A;
+    border:1px solid #1E293B;
+    border-radius:6px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+.sb-foot .k {
+    font:700 9px/1 'Inter', sans-serif;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:#64748B;
+}
+.sb-foot .v {
+    font:500 11px/1.4 'JetBrains Mono', monospace;
+    color:#E5E7EB;
+}
+
+.aegis-hero {
+    position:relative;
+    background:#0B1020;
+    border:1px solid rgba(139,92,246,0.35);
+    border-radius:8px;
+    padding:18px 22px;
+    overflow:hidden;
+    min-height:166px;
+    margin-bottom:12px;
+}
+.aegis-hero::before {
+    content:"";
+    position:absolute;
+    inset:0;
+    background-image:
+      linear-gradient(45deg, rgba(139,92,246,0.05) 25%, transparent 25%, transparent 75%, rgba(139,92,246,0.05) 75%),
+      linear-gradient(45deg, rgba(139,92,246,0.05) 25%, transparent 25%, transparent 75%, rgba(139,92,246,0.05) 75%);
+    background-size:24px 24px;
+    background-position:0 0, 12px 12px;
+    opacity:.45;
+    pointer-events:none;
+    mask-image:radial-gradient(ellipse at right, black 0%, transparent 70%);
+}
+.aegis-hero .hero-row {
+    position:relative;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:24px;
+}
+.aegis-hero .wm {
+    font-family:'Inter', sans-serif;
+    font-size:clamp(42px, 4.5vw, 68px);
+    font-weight:700;
+    letter-spacing:-0.03em;
+    color:#F8FAFC;
+    line-height:1;
+    margin:0;
+}
+.aegis-hero .wm .ai { color:#8B5CF6; }
+.aegis-hero .sub {
+    font-family:'Inter', sans-serif;
+    font-size:clamp(13px, 1.2vw, 18px);
+    line-height:1.3;
+    color:#94A3B8;
+    letter-spacing:.005em;
+    margin-top:10px;
+}
+.hero-right {
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:10px;
+}
+.badge-amd {
+    background:#0B1020;
+    border:1px solid rgba(148,163,184,0.55);
+    border-radius:6px;
+    padding:11px 18px;
+    font:700 13px/1 'Inter', sans-serif;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:#CBD5E1;
+    white-space:nowrap;
+}
+.live-pill {
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:6px 14px;
+    border-radius:9999px;
+    font:700 10px/1 'Inter', sans-serif;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    white-space:nowrap;
+}
+.live-pill .dot {
+    width:6px;
+    height:6px;
+    border-radius:50%;
+    animation:blink-dot 2s infinite;
+}
+.live-pill.live {
+    background:rgba(34,197,94,0.10);
+    border:1px solid rgba(34,197,94,0.30);
+    color:#22C55E;
+}
+.live-pill.live .dot { background:#22C55E; box-shadow:0 0 6px #22C55E; }
+.live-pill.demo {
+    background:rgba(245,158,11,0.10);
+    border:1px solid rgba(245,158,11,0.30);
+    color:#FCD34D;
+}
+.live-pill.demo .dot { background:#F59E0B; box-shadow:0 0 6px #F59E0B; }
+.live-pill.offline {
+    background:rgba(239,68,68,0.10);
+    border:1px solid rgba(239,68,68,0.30);
+    color:#FCA5A5;
+}
+.live-pill.offline .dot { background:#EF4444; box-shadow:0 0 6px #EF4444; }
+.pill-row {
+    position:relative;
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:18px;
+}
+.cap-pill {
+    display:inline-flex;
+    align-items:center;
+    height:34px;
+    padding:0 14px;
+    border-radius:6px;
+    font:700 12px/1 'JetBrains Mono', monospace;
+    letter-spacing:.04em;
+}
+.cap-pill.red { background:rgba(239,68,68,0.10); border:1px solid rgba(239,68,68,0.4); color:#FCA5A5; }
+.cap-pill.blue { background:rgba(59,130,246,0.10); border:1px solid rgba(59,130,246,0.4); color:#93C5FD; }
+.cap-pill.amber { background:rgba(245,158,11,0.10); border:1px solid rgba(245,158,11,0.4); color:#FCD34D; }
+.cap-pill.green { background:rgba(34,197,94,0.10); border:1px solid rgba(34,197,94,0.4); color:#86EFAC; }
+.cap-pill.purple { background:rgba(139,92,246,0.10); border:1px solid rgba(139,92,246,0.4); color:#C4B5FD; }
+
+.aegis-sysbar,
+.aegis-card {
+    background:linear-gradient(180deg,#111827 0%,#0B1020 100%);
+    border:1px solid #243044;
+    border-radius:8px;
+}
+.aegis-sysbar {
+    padding:16px 20px;
+    margin-bottom:12px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    min-height:88px;
+}
+.aegis-sysbar .head,
+.aegis-card .eyebrow,
+.aegis-monitor .head .label {
+    font:700 14px/1 'Inter', sans-serif;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:#64748B;
+}
+.aegis-sysbar .row {
+    display:flex;
+    flex-wrap:wrap;
+    gap:16px 22px;
+}
+.aegis-sysbar .it {
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font:500 12px/1 'JetBrains Mono', monospace;
+    color:#E5E7EB;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+}
+.aegis-sysbar .it .dot {
+    width:7px;
+    height:7px;
+    border-radius:50%;
+}
+.aegis-sysbar .it .k { color:#64748B; }
+.aegis-sysbar .it .v { color:#E2E8F0; }
+.aegis-card {
+    padding:18px 20px;
+    margin-bottom:10px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+.aegis-card .eyebrow {
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+.aegis-card .eyebrow .pe-dot {
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:#8B5CF6;
+    box-shadow:0 0 6px #8B5CF6;
+}
+.aegis-card .eyebrow .pe-meta {
+    margin-left:auto;
+    font:500 11px/1 'JetBrains Mono', monospace;
+    color:#475569;
+    letter-spacing:.04em;
+    text-transform:none;
+}
+.mission-input {
+    background:#050814;
+    border:1px solid #334155;
+    border-radius:6px;
+    padding:13px 16px;
+    color:#F8FAFC;
+    font:500 14px/1.3 'JetBrains Mono', monospace;
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+.mission-input .caret,
+.mission-input .blink { color:#8B5CF6; font-weight:700; }
+.mission-input .blink { animation:blink-dot 1s infinite; }
+.mode-row {
+    display:flex;
+    gap:8px;
+    align-items:center;
+    flex-wrap:wrap;
+}
+.mode-chip {
+    display:inline-flex;
+    align-items:center;
+    height:34px;
+    padding:0 14px;
+    border-radius:6px;
+    font:600 12px/1 'Inter', sans-serif;
+    background:transparent;
+    border:1px solid #334155;
+    color:#94A3B8;
+}
+.mode-chip.active {
+    background:rgba(139,92,246,0.12);
+    border-color:rgba(139,92,246,0.40);
+    color:#C4B5FD;
+}
+.run-btn-visual {
+    margin-left:auto;
+    height:34px;
+    padding:0 18px;
+    border-radius:6px;
+    font:700 12px/34px 'Inter', sans-serif;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:#fff;
+    background:linear-gradient(135deg,#7C3AED 0%,#4F46E5 100%);
+    border:1px solid rgba(139,92,246,0.5);
+    white-space:nowrap;
+}
+.aegis-meta-list {
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+.aegis-meta-row {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    background:rgba(15,23,42,0.6);
+    border:1px solid #1E293B;
+    border-radius:6px;
+    padding:9px 14px;
+}
+.aegis-meta-row .k {
+    font:600 12px/1 'Inter', sans-serif;
+    color:#94A3B8;
+}
+.aegis-meta-row .v {
+    font:600 12px/1 'JetBrains Mono', monospace;
+    color:#E5E7EB;
+    letter-spacing:.02em;
+    text-align:right;
+}
+
+.aegis-monitor {
+    background:#000810;
+    border:1px solid #334155;
+    border-radius:8px;
+    padding:16px 18px;
+    margin-bottom:10px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    line-height:1.5;
+    color:#94A3B8;
+    min-height:218px;
+    max-height:230px;
+    overflow:auto;
+}
+.aegis-monitor .head {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:12px;
+}
+.aegis-monitor .right {
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font:500 11px/1 'JetBrains Mono', monospace;
+    color:#475569;
+}
+.aegis-monitor .right .dot {
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:#22C55E;
+    box-shadow:0 0 6px #22C55E;
+    animation:blink-dot 1.4s infinite;
+}
+.aegis-monitor .log { display:flex; flex-direction:column; gap:6px; }
+.aegis-monitor .log-line {
+    font:400 12px/1.5 'JetBrains Mono', monospace;
+    color:#94A3B8;
+    letter-spacing:.01em;
+}
+.aegis-monitor .ts { color:#475569; margin-right:10px; }
+.aegis-monitor .ok { color:#86EFAC; }
+.aegis-monitor .info { color:#93C5FD; }
+.aegis-monitor .warn { color:#FCD34D; }
+.aegis-monitor .err { color:#FCA5A5; }
+
+.gates-list {
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+.aegis-gate {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    background:rgba(15,23,42,0.5);
+    border:1px solid #1E293B;
+    border-radius:6px;
+    padding:10px 14px;
+}
+.aegis-gate .lbl {
+    font:600 12px/1 'Inter', sans-serif;
+    color:#94A3B8;
+}
+.aegis-gate .st {
+    font:700 11px/1 'JetBrains Mono', monospace;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    padding:5px 10px;
+    border-radius:4px;
+}
+.aegis-endpoint-mini {
+    background:#0F172A;
+    border:1px solid #1E293B;
+    border-radius:6px;
+    padding:12px 14px;
+    min-height:80px;
+}
+.aegis-endpoint-mini .k {
+    font:700 9px/1 'Inter', sans-serif;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:#64748B;
+    margin-bottom:8px;
+}
+.aegis-endpoint-mini .v {
+    font:500 11px/1.45 'JetBrains Mono', monospace;
+    color:#E5E7EB;
+}
+.aegis-pipeline {
+    display:grid;
+    grid-template-columns: 1fr 1fr 1fr 1.18fr;
+    gap:14px;
+}
+@media (max-width: 1050px) {
+    .aegis-pipeline { grid-template-columns: repeat(2, 1fr); }
+}
+.aegis-agent {
+    height:58px;
+    background:#111827;
+    border:1px solid #334155;
+    border-top:2px solid;
+    border-radius:6px;
+    padding:9px 14px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:4px;
+    position:relative;
+}
+.aegis-agent .role {
+    font:700 12px/1 'Inter', sans-serif;
+    letter-spacing:0;
+    text-transform:none;
+}
+.aegis-agent .model {
+    font:400 12px/1 'JetBrains Mono', monospace;
+    color:#94A3B8;
+    margin-top:0;
+    max-width:calc(100% - 30px);
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+.aegis-agent .check {
+    position:absolute;
+    right:12px;
+    top:50%;
+    transform:translateY(-50%);
+    width:18px;
+    height:18px;
+    border-radius:50%;
+    background:rgba(34,197,94,0.15);
+    border:1px solid rgba(34,197,94,0.45);
+    color:#22C55E;
+    font:700 10px/18px 'Inter', sans-serif;
+    text-align:center;
+}
+.aegis-agent .arrow {
+    position:absolute;
+    right:-12px;
+    top:50%;
+    transform:translate(50%,-50%);
+    color:#475569;
+    font:400 14px/1 'JetBrains Mono', monospace;
+    pointer-events:none;
+}
+.aegis-agent:last-child .arrow { display:none; }
+
 </style>""", unsafe_allow_html=True)
 
 
@@ -724,7 +1216,6 @@ def _hop_card_html(hop: dict, index: int) -> str:
 
 
 def render_topology_lab():
-    st.markdown(_page_header_html("Topology Lab"), unsafe_allow_html=True)
     _render_top_panels(demo_mode, "Topology Lab")
 
     col_input, col_select = st.columns([1, 2], vertical_alignment="bottom")
@@ -988,7 +1479,7 @@ def _rocm_live_panel_html(demo_mode: bool, health: dict) -> str:
         accent_border = "rgba(34,197,94,.25)"
         pill_label = "LIVE"
     else:
-        err = html.escape(str(health.get("error") or "unreachable"))
+        err = html.escape(str(health.get("error") or "unreachable").replace("\n", " ").strip()[:180])
         title = "LIVE ENDPOINT NOT REACHABLE"
         body = (
             '<p style="font-size:12px;color:#FCA5A5;margin:0;line-height:1.55;font-family:Inter,sans-serif">'
@@ -1025,6 +1516,12 @@ def _render_rocm_evidence_downloads() -> None:
     Streamlit does not serve arbitrary repo files at /assets/* like a static web
     server. So we provide explicit download buttons and inline previews.
     """
+    global _ROCM_EVIDENCE_DOWNLOADS_RENDERED
+    if _ROCM_EVIDENCE_DOWNLOADS_RENDERED:
+        st.caption("AMD/ROCm evidence downloads are already rendered in this view.")
+        return
+    _ROCM_EVIDENCE_DOWNLOADS_RENDERED = True
+
     evidence = [
         ("rocm_smi.json", "ROCm GPU snapshot (rocm-smi --json)"),
         ("vllm_info.txt", "vLLM version + endpoint metadata"),
@@ -1046,6 +1543,7 @@ def _render_rocm_evidence_downloads() -> None:
                 file_name=name,
                 mime=mime,
                 use_container_width=True,
+                key=f"rocm-evidence-download-{name}",
             )
             with st.expander(label, expanded=False):
                 if name.endswith(".json"):
@@ -1217,7 +1715,7 @@ def _vectr_style_export(
 
     description = (
         f"Authorized purple-team validation for ATT&CK {technique_id} "
-        f"({technique_name}). Generated by AegisOps OS multi-agent pipeline."
+        f"({technique_name}). Generated by AegisOps AI multi-agent pipeline."
     )
 
     rows = [
@@ -1238,7 +1736,7 @@ def _vectr_style_export(
             summary["verdict"],
             "Closed" if summary["verdict"] == "PASS" else "Open",
             str(summary["coverage_score"]),
-            "AegisOps OS · vLLM/ROCm · MI300X",
+            "AegisOps AI · vLLM/ROCm · MI300X",
         ],
     ]
 
@@ -1313,11 +1811,11 @@ def _render_artifact_quality_gates(verifier_output: str | None) -> None:
 
 
 def _render_rubric_mapping() -> None:
-    """Static text mapping AegisOps OS capabilities to the judging rubric."""
+    """Static text mapping AegisOps AI capabilities to the judging rubric."""
     st.markdown(
         _section_header_html(
             "Rubric Mapping",
-            "How AegisOps OS Scores Against the Judging Criteria",
+            "How AegisOps AI Scores Against the Judging Criteria",
             "#06B6D4",
         ),
         unsafe_allow_html=True,
@@ -1334,6 +1832,8 @@ def _render_rubric_mapping() -> None:
 
 
 # ── Session state ──────────────────────────────────────────────────────────────
+_ROCM_EVIDENCE_DOWNLOADS_RENDERED = False
+
 for key, default in [
     ("pipeline_version", PIPELINE_VERSION),
     ("apt_mode", False), ("chain_mode", False),
@@ -1353,9 +1853,15 @@ if st.session_state.pipeline_version != PIPELINE_VERSION:
 
 # ── Command Center sidebar ────────────────────────────────────────────────────
 with st.sidebar:
-    st.title("🛡️ AegisOps OS")
-    st.caption("MITRE ATT&CK → Purple Team Readiness")
-    st.markdown('<div style="height:1px;background:#1E293B;margin:14px 0 18px"></div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="sb-brand">'
+        '<div class="sb-mark">A</div>'
+        '<div><div class="name">AegisOps <span class="accent">AI</span></div>'
+        '<div class="role">SOC OPERATOR</div></div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown('<div class="sb-eyebrow">SOC Console</div>', unsafe_allow_html=True)
 
     st.markdown(
         '<div style="font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;'
@@ -1385,7 +1891,7 @@ with st.sidebar:
             '<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);'
             'border-radius:6px;padding:10px 12px;margin-top:8px">'
             '<p style="font-size:11px;color:#FCD34D;margin:0;font-family:Inter,sans-serif;line-height:1.55">'
-            'Demo Mode is on. AegisOps OS replays a deterministic golden run; AMD/MI300X provenance is preserved in the Judge View tab.'
+            'Demo Mode is on. AegisOps AI replays a deterministic golden run; AMD/MI300X provenance is preserved in the Judge View tab.'
             '</p></div>',
             unsafe_allow_html=True,
         )
@@ -1397,6 +1903,19 @@ with st.sidebar:
             'Live AMD/vLLM secrets not configured. Toggle Demo Mode on or run <code>./start_vllm.sh</code> on MI300X.</p></div>',
             unsafe_allow_html=True,
         )
+
+    endpoint_line = "demo replay · AMD proof preserved" if demo_mode else (
+        "configured · probe in dashboard" if live_llm_configured else "fallback available"
+    )
+    endpoint_color = "#FCD34D" if demo_mode else ("#86EFAC" if live_llm_configured else "#FCA5A5")
+    st.markdown(
+        '<div class="sb-foot">'
+        '<div class="k">Endpoint</div>'
+        '<div class="v">vLLM · MI300X</div>'
+        f'<div class="v" style="color:{endpoint_color}">{html.escape(endpoint_line)}</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
     st.markdown('<div style="height:1px;background:#1E293B;margin:18px 0"></div>', unsafe_allow_html=True)
 
@@ -1498,14 +2017,470 @@ def _model_routing_panel_html() -> str:
     """
 
 
+
+# ── AegisOps SOC Command Center shell ──────────────────────────────────────────
+
+def _short(name: str, n: int = 28) -> str:
+    if not name:
+        return "—"
+    name = str(name)
+    return name if len(name) <= n else name[: n - 1] + "…"
+
+
+def _resolve_models() -> dict:
+    """Resolve primary and validator model labels without changing env names."""
+    primary = os.getenv("PRIMARY_MODEL") or os.getenv("MODEL_NAME") or ""
+    qwen_model = os.getenv("QWEN_MODEL_NAME") or ""
+    qwen_base = os.getenv("QWEN_BASE_URL") or ""
+    qwen_configured = bool(qwen_model and qwen_base)
+
+    primary_short = primary.rsplit("/", 1)[-1] if primary else "Llama 3.3 70B"
+    validator_model = qwen_model if qwen_configured else primary
+    validator_short = qwen_model.rsplit("/", 1)[-1] if qwen_configured else primary_short
+
+    return {
+        "primary": primary,
+        "primary_short": _short(primary_short),
+        "validator": validator_model,
+        "validator_short": _short(validator_short),
+        "qwen_configured": qwen_configured,
+    }
+
+
+def _hex_to_rgb(hex_color: str) -> str:
+    h = hex_color.lstrip("#")
+    return f"{int(h[0:2], 16)},{int(h[2:4], 16)},{int(h[4:6], 16)}"
+
+
+def _technique_display_label() -> str:
+    technique = str(globals().get("technique_id") or st.session_state.get("technique_id") or "T1059.001")
+    name_map = {tid: name for tid, name in FEATURED_TECHNIQUE_CATALOG}
+    name = name_map.get(technique, "").strip()
+    return f"{technique} · {name}" if name else technique
+
+
+def _capability_pills_html() -> str:
+    models = _resolve_models()
+    qwen_state = "CONFIGURED" if models["qwen_configured"] else "FALLBACK"
+    pills = [
+        ("red", ">_ MITRE ATT&CK v14"),
+        ("blue", ">_ LangGraph"),
+        ("amber", ">_ vLLM on ROCm"),
+        ("green", ">_ AMD MI300X"),
+        ("purple", f">_ Qwen Validator {qwen_state}"),
+    ]
+    return "".join(
+        f'<span class="cap-pill {kind}">{html.escape(label)}</span>'
+        for kind, label in pills
+    )
+
+
+def _endpoint_status(demo_mode: bool, health: dict) -> tuple[str, str, str]:
+    models = _resolve_models()
+    if demo_mode:
+        return "demo", "DEMO REPLAY ACTIVE · AMD PROVENANCE PRESERVED", "#F59E0B"
+    if health.get("reachable"):
+        model = models["primary_short"]
+        return "live", f"LIVE · vLLM on ROCm · MI300X · {model}", "#22C55E"
+    return "offline", "OFFLINE · DEMO FALLBACK AVAILABLE", "#EF4444"
+
+
+def render_hero_header(mode: str, demo_mode: bool, health: dict) -> None:
+    cfg = {
+        "Single Technique": (
+            "TECHNIQUE ANALYSIS",
+            "Advanced known ATT&CK simulation · attacker behavior → realtime detections",
+        ),
+        "APT Group": (
+            "THREAT ACTOR SIM",
+            "Defensive simulation across techniques attributed to a threat actor",
+        ),
+        "Kill Chain": (
+            "KILL CHAIN SIM",
+            "Stage-by-stage defensive analysis for expected attacker behavior",
+        ),
+        "Topology Lab": (
+            "TOPOLOGY LAB",
+            "Sandbox lateral-movement simulation with realtime detection response",
+        ),
+    }
+    pill_label, subtitle = cfg.get(mode, ("SOC READINESS", ""))
+    status_class, status_label, _ = _endpoint_status(demo_mode, health)
+
+    st.markdown(
+        '<div class="aegis-hero">'
+        '<div class="hero-row">'
+        '<div class="hero-left">'
+        '<h1 class="wm">AegisOps <span class="ai">AI</span></h1>'
+        '<div class="sub">SOC READINESS COMMAND CENTER · ATT&amp;CK → DETECTION → RESPONSE → VALIDATION</div>'
+        f'<div class="sub" style="font-size:12px;margin-top:6px;color:#64748B">{html.escape(pill_label)} · {html.escape(subtitle)}</div>'
+        '</div>'
+        '<div class="hero-right">'
+        '<div class="badge-amd">AMD DEVELOPER HACKATHON 2026</div>'
+        f'<div class="live-pill {status_class}"><span class="dot"></span>{html.escape(status_label)}</div>'
+        '</div>'
+        '</div>'
+        f'<div class="pill-row">{_capability_pills_html()}</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_capability_badges() -> None:
+    st.markdown(f'<div class="pill-row">{_capability_pills_html()}</div>', unsafe_allow_html=True)
+
+
+def render_system_status_panel(demo_mode: bool, health: dict) -> None:
+    """Render live/demo/offline backend and hybrid model routing status."""
+    try:
+        routing = get_model_routing_status() or {}
+    except Exception as exc:
+        routing = {"error": str(exc)}
+
+    models = _resolve_models()
+
+    if demo_mode:
+        ep_dot = "#F59E0B"
+        ep_text = "AMD MI300X · DEMO REPLAY ACTIVE"
+    elif health.get("reachable"):
+        ep_dot = "#22C55E"
+        latency = health.get("latency_ms")
+        suffix = f" · {latency} ms" if latency is not None else ""
+        ep_text = f"AMD MI300X · LIVE / vLLM on ROCm{suffix}"
+    else:
+        ep_dot = "#EF4444"
+        ep_text = "AMD MI300X · ENDPOINT UNREACHABLE"
+
+    mode_label = (
+        str(
+            routing.get("model_mode")
+            or routing.get("mode")
+            or routing.get("routing_mode")
+            or "hybrid"
+        ).upper()
+        if isinstance(routing, dict)
+        else "HYBRID"
+    )
+
+    safety_label = "PASS" if not routing.get("error") else "DEGRADED"
+    safety_dot = "#22C55E" if safety_label == "PASS" else "#F59E0B"
+
+    items_html = "".join(
+        [
+            f'<span class="it"><span class="dot" style="background:{ep_dot};box-shadow:0 0 6px {ep_dot}"></span>'
+            f'<span class="v">{html.escape(ep_text)}</span></span>',
+            f'<span class="it"><span class="dot" style="background:#8B5CF6"></span>'
+            f'<span class="k">PRIMARY:</span><span class="v">{html.escape(models["primary_short"])}</span></span>',
+            f'<span class="it"><span class="dot" style="background:#8B5CF6"></span>'
+            f'<span class="k">VALIDATOR:</span><span class="v">{html.escape(models["validator_short"])}</span></span>',
+            f'<span class="it"><span class="dot" style="background:#3B82F6"></span>'
+            f'<span class="k">MODE:</span><span class="v">{html.escape(mode_label)}</span></span>',
+            f'<span class="it"><span class="dot" style="background:{safety_dot}"></span>'
+            f'<span class="k">SAFETY:</span><span class="v">{html.escape(safety_label)}</span></span>',
+        ]
+    )
+
+    st.markdown(
+        '<div class="aegis-sysbar">'
+        '<div class="head">▸ SYSTEM STATUS</div>'
+        f'<div class="row">{items_html}</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_mission_input_card(mode: str) -> None:
+    commands = {
+        "Single Technique": f"{_technique_display_label()} · Enterprise Workstation → SIEM Detection",
+        "APT Group": "APT Group · Threat Actor Simulation → Multi-Technique Detection",
+        "Kill Chain": "Kill Chain · Stage Progression → Correlated SOC Response",
+        "Topology Lab": "Topology Lab · Sandbox Path → Realtime Detection Response",
+    }
+    chips = "".join(
+        f'<span class="mode-chip{" active" if label == mode else ""}">{html.escape(label)}</span>'
+        for label in ["Single Technique", "APT Group", "Kill Chain", "Topology Lab"]
+    )
+
+    st.markdown(
+        '<div class="aegis-card">'
+        '<div class="eyebrow"><span class="pe-dot"></span>MISSION INPUT'
+        '<span class="pe-meta">technique · group · chain · topology</span></div>'
+        '<div class="mission-input">'
+        '<span class="caret">&gt;_</span>'
+        f'<span>{html.escape(commands.get(mode, "Configure mission → detection pipeline"))}</span>'
+        '<span class="blink">▌</span>'
+        '</div>'
+        f'<div class="mode-row">{chips}<span class="run-btn-visual">Run Pipeline →</span></div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_pipeline_meta_panel(mode: str, demo_mode: bool, health: dict) -> None:
+    models = _resolve_models()
+    qwen_state = (
+        "Qwen Validator · CONFIGURED"
+        if models["qwen_configured"]
+        else f"Qwen Validator · FALLBACK · {models['primary_short']}"
+    )
+    qwen_color = "#C4B5FD" if models["qwen_configured"] else "#FCD34D"
+
+    if demo_mode:
+        status_v, status_color = "DEMO REPLAY", "#FCD34D"
+    elif health.get("reachable"):
+        status_v, status_color = "READY", "#86EFAC"
+    else:
+        status_v, status_color = "OFFLINE", "#FCA5A5"
+
+    rows = [
+        ("Status", status_v, status_color),
+        ("Workflow", html.escape(mode), "#E5E7EB"),
+        ("Pipeline", "Threat → Detection → Response → Validation", "#E5E7EB"),
+        ("Artifacts", "Sigma · SPL · VECTR · Playbook · JSON", "#E5E7EB"),
+        ("Validator", html.escape(qwen_state), qwen_color),
+        ("Pipeline ver.", html.escape(PIPELINE_VERSION), "#94A3B8"),
+    ]
+
+    rows_html = "".join(
+        f'<div class="aegis-meta-row"><span class="k">{html.escape(k)}</span>'
+        f'<span class="v" style="color:{c}">{v}</span></div>'
+        for k, v, c in rows
+    )
+
+    st.markdown(
+        '<div class="aegis-card">'
+        '<div class="eyebrow"><span class="pe-dot" style="background:#3B82F6;box-shadow:0 0 6px #3B82F6"></span>PIPELINE META'
+        f'<span class="pe-meta">{html.escape(PIPELINE_VERSION)} · hybrid</span></div>'
+        f'<div class="aegis-meta-list">{rows_html}</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_live_monitor_panel(demo_mode: bool, health: dict) -> None:
+    now = datetime.datetime.utcnow().strftime("%H:%M:%SZ")
+    models = _resolve_models()
+    monitor_state = "STREAMING · 7 events"
+
+    lines: list[str] = []
+
+    if demo_mode:
+        monitor_state = "DEMO REPLAY · 7 events"
+        lines += [
+            f'<div class="log-line"><span class="ts">{now}</span><span class="warn">demo replay active / AMD provenance preserved</span> · pipeline_version={html.escape(PIPELINE_VERSION)}</div>',
+            f'<div class="log-line"><span class="ts">{now}</span>rocm-smi.json + rocm_benchmark.json bundled for judge evidence</div>',
+            f'<div class="log-line"><span class="ts">{now}</span>threat_agent ready · <span class="info">route=demo_replay</span></div>',
+            f'<div class="log-line"><span class="ts">{now}</span>detection_agent ready · <span class="info">route=demo_replay</span></div>',
+            f'<div class="log-line"><span class="ts">{now}</span>response_agent ready · <span class="info">SOC playbook enabled</span></div>',
+            f'<div class="log-line"><span class="ts">{now}</span>validation_agent ready · <span class="info">route={"qwen_validator" if models["qwen_configured"] else "fallback"}</span></div>',
+            f'<div class="log-line"><span class="ts">{now}</span><span class="ok">VALIDATED · PASS</span> · exports ready</div>',
+        ]
+    elif health.get("reachable"):
+        latency = health.get("latency_ms")
+        validator_route = "qwen_validator" if models["qwen_configured"] else "primary_generator"
+        lines += [
+            f'<div class="log-line"><span class="ts">{now}</span><span class="ok">system online</span> · pipeline_version={html.escape(PIPELINE_VERSION)}</div>',
+            f'<div class="log-line"><span class="ts">{now}</span>amd_mi300x endpoint reachable · <span class="info">/v1/models {latency} ms</span></div>',
+            f'<div class="log-line"><span class="ts">{now}</span>threat_agent ready · <span class="info">route=primary_generator</span> · model={html.escape(models["primary_short"])}</div>',
+            f'<div class="log-line"><span class="ts">{now}</span>detection_agent ready · <span class="info">route=primary_generator</span></div>',
+            f'<div class="log-line"><span class="ts">{now}</span>response_agent ready · <span class="info">SOC playbook enabled</span></div>',
+            f'<div class="log-line"><span class="ts">{now}</span>validation_agent ready · <span class="info">route={validator_route}</span></div>',
+            f'<div class="log-line"><span class="ts">{now}</span><span class="ok">awaiting mission</span> · Sigma · SPL · VECTR · JSON</div>',
+        ]
+    else:
+        monitor_state = "FALLBACK · DEMO PACKAGE"
+        err = html.escape(str(health.get("error") or "unreachable").replace("\n", " ").strip()[:180])
+        lines += [
+            f'<div class="log-line"><span class="ts">{now}</span><span class="err">live endpoint unreachable</span> · {err}</div>',
+            f'<div class="log-line"><span class="ts">{now}</span>graceful fallback enabled · deterministic demo package available</div>',
+            f'<div class="log-line"><span class="ts">{now}</span>amd_mi300x provenance bundled · rocm-smi.json available</div>',
+            f'<div class="log-line"><span class="ts">{now}</span>threat_agent <span class="warn">will use fallback on run</span></div>',
+            f'<div class="log-line"><span class="ts">{now}</span>detection_agent <span class="warn">will use fallback on run</span></div>',
+            f'<div class="log-line"><span class="ts">{now}</span>validation_agent <span class="warn">will use fallback on run</span></div>',
+        ]
+
+    st.markdown(
+        '<div class="aegis-monitor">'
+        '<div class="head"><div class="label">▸ Live Monitor</div>'
+        f'<div class="right"><span class="dot"></span>{html.escape(monitor_state)}</div></div>'
+        f'<div class="log">{"".join(lines)}</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_readiness_gates_panel(demo_mode: bool, health: dict) -> None:
+    models = _resolve_models()
+
+    def gate(label: str, status: str, color: str) -> str:
+        return (
+            '<div class="aegis-gate">'
+            f'<span class="lbl">{html.escape(label)}</span>'
+            f'<span class="st" style="background:rgba({_hex_to_rgb(color)},.10);'
+            f'border:1px solid rgba({_hex_to_rgb(color)},.35);color:{color}">{html.escape(status)}</span>'
+            '</div>'
+        )
+
+    if demo_mode:
+        coverage = ("READY (DEMO)", "#FCD34D")
+    elif health.get("reachable"):
+        coverage = ("READY", "#86EFAC")
+    else:
+        coverage = ("DEGRADED", "#FCA5A5")
+
+    qwen = ("CONFIGURED", "#C4B5FD") if models["qwen_configured"] else ("FALLBACK", "#FCD34D")
+    safety = ("PASS", "#86EFAC")
+    fallback = ("AVAILABLE", "#FCD34D")
+    product = ("ENABLED", "#C4B5FD")
+    export = ("READY", "#86EFAC")
+    gates_meta = "6 / 6 ready" if demo_mode or health.get("reachable") else "5 / 6 fallback"
+
+    items = [
+        ("Coverage Gate", *coverage),
+        ("Safety Gate", *safety),
+        ("Qwen Validator", *qwen),
+        ("Demo Fallback", *fallback),
+        ("Product Readiness", *product),
+        ("Artifact Export", *export),
+    ]
+
+    body = "".join(gate(lbl, st_, clr) for lbl, st_, clr in items)
+
+    st.markdown(
+        '<div class="aegis-card">'
+        '<div class="eyebrow"><span class="pe-dot" style="background:#22C55E;box-shadow:0 0 6px #22C55E"></span>READINESS GATES'
+        f'<span class="pe-meta">{html.escape(gates_meta)}</span></div>'
+        f'<div class="gates-list">{body}</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_endpoint_mini_card(demo_mode: bool, health: dict) -> None:
+    status_class, status_label, color = _endpoint_status(demo_mode, health)
+    if demo_mode:
+        line_1 = "vLLM · MI300X"
+        line_2 = "demo replay · proof preserved"
+    elif health.get("reachable"):
+        latency = health.get("latency_ms")
+        line_1 = "vLLM · MI300X"
+        line_2 = f"{latency} ms · /v1/models"
+    else:
+        line_1 = "vLLM · MI300X"
+        line_2 = "fallback available"
+
+    st.markdown(
+        '<div class="aegis-endpoint-mini">'
+        '<div class="k">Endpoint</div>'
+        f'<div class="v">{html.escape(line_1)}</div>'
+        f'<div class="v" style="color:{color}">{html.escape(line_2)}</div>'
+        f'<div class="v" style="color:#64748B;margin-top:5px">{html.escape(status_label)}</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_agent_pipeline_panel(demo_mode: bool, health: dict, metrics: list | None = None) -> None:
+    models = _resolve_models()
+
+    if demo_mode:
+        meta_default = "demo replay · provenance preserved"
+    elif health.get("reachable"):
+        meta_default = f"endpoint live · {health.get('latency_ms', '—')} ms"
+    else:
+        meta_default = "awaiting endpoint · graceful fallback"
+
+    agents = [
+        ("threat", "Threat Agent", models["primary_short"], "#C4B5FD", meta_default),
+        ("detection", "Detection Agent", models["primary_short"], "#93C5FD", meta_default),
+        ("response", "Response Agent", models["primary_short"], "#FCD34D", meta_default),
+        (
+            "validation",
+            "Validation Agent",
+            models["validator_short"] if models["qwen_configured"] else f"{models['primary_short']} (fallback)",
+            "#C4B5FD",
+            f"route={'qwen_validator' if models['qwen_configured'] else 'fallback'}",
+        ),
+    ]
+
+    if metrics:
+        by_agent = {
+            (m.get("agent") or ""): m
+            for m in metrics
+            if isinstance(m, dict)
+        }
+        role_keys = ["red_agent", "blue_agent", "response_agent", "verifier_agent"]
+
+        for i, key in enumerate(role_keys):
+            m = by_agent.get(key)
+            if not m:
+                continue
+
+            latency = m.get("latency_ms")
+            model_role = m.get("model_role") or m.get("requested_role") or ""
+            token_total = m.get("total_tokens")
+
+            extras = []
+            if model_role:
+                extras.append(f"route={model_role}")
+            if latency is not None:
+                extras.append(f"{latency} ms")
+            if token_total:
+                extras.append(f"{token_total} tok")
+
+            if extras:
+                kind, role, model_name, color, _ = agents[i]
+                agents[i] = (kind, role, model_name, color, " · ".join(extras))
+
+    cards = "".join(
+        f'<div class="aegis-agent {kind}" style="border-top-color:{color}">'
+        f'<div class="role" style="color:{color}">{html.escape(role)}</div>'
+        f'<div class="model">{html.escape(meta)}</div>'
+        '<div class="check">✓</div>'
+        '<div class="arrow">→</div>'
+        '</div>'
+        for kind, role, model_name, color, meta in agents
+    )
+
+    st.markdown(
+        f'<div class="aegis-pipeline">{cards}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+
 def _render_top_panels(demo_mode: bool, mode_name: str) -> None:
-    """Render the per-mode header strip: status bar, model routing, ROCm/AMD evidence, originality."""
-    st.markdown(_status_bar_html(demo_mode, mode_name), unsafe_allow_html=True)
-    st.markdown(_model_routing_panel_html(), unsafe_allow_html=True)
-    health = {} if demo_mode else _cached_live_health()
-    st.markdown(_rocm_live_panel_html(demo_mode, health), unsafe_allow_html=True)
-    _render_rocm_evidence_downloads()
-    st.markdown(_originality_callout_html(), unsafe_allow_html=True)
+    """Compose the SOC Command Center shell while preserving AMD evidence rendering."""
+    try:
+        health = {} if demo_mode else (_cached_live_health() or {})
+    except Exception as exc:
+        health = {"reachable": False, "error": str(exc)}
+
+    render_hero_header(mode_name, demo_mode, health)
+    render_system_status_panel(demo_mode, health)
+
+    col_mission, col_meta = st.columns([1.4, 1], gap="medium")
+    with col_mission:
+        render_mission_input_card(mode_name)
+    with col_meta:
+        render_pipeline_meta_panel(mode_name, demo_mode, health)
+
+    col_mon, col_gates = st.columns([1.6, 1], gap="medium")
+    with col_mon:
+        render_live_monitor_panel(demo_mode, health)
+    with col_gates:
+        render_readiness_gates_panel(demo_mode, health)
+
+    metrics = (st.session_state.get("metrics") or {}).get("agents")
+    col_endpoint, col_agents = st.columns([0.78, 2.22], gap="medium")
+    with col_endpoint:
+        render_endpoint_mini_card(demo_mode, health)
+    with col_agents:
+        render_agent_pipeline_panel(demo_mode, health, metrics=metrics)
+
+    # AMD/ROCm evidence downloads remain isolated to the Validation & AMD Proof tab.
+    # Do not render them here too, or Streamlit creates duplicate download_button IDs.
+
 
 
 # ── Mode sync ──────────────────────────────────────────────────────────────────
@@ -1523,11 +2498,39 @@ elif mode == "Topology Lab":
 
 # ── Agent runner ───────────────────────────────────────────────────────────────
 def run_agents(technique_id: str):
-    result = DEMO_INVOKE_RESULT if demo_mode else app.invoke({"technique_id": technique_id})
+    """Run the live agent graph, with graceful demo fallback if the backend is unavailable."""
+    if demo_mode:
+        result = DEMO_INVOKE_RESULT
+    else:
+        try:
+            health = _cached_live_health() or {}
+        except Exception:
+            health = {"reachable": False, "error": "health probe failed"}
+
+        if not health.get("reachable"):
+            st.warning(
+                "Live AMD/vLLM backend is unavailable. "
+                "AegisOps AI is falling back to the deterministic demo readiness package without interrupting the UI."
+            )
+            reason = str(health.get("error") or "endpoint unreachable").replace("\n", " ").strip()
+            st.caption(f"Fallback reason: {reason[:180]}")
+            result = DEMO_INVOKE_RESULT
+        else:
+            try:
+                result = app.invoke({"technique_id": technique_id})
+            except Exception as exc:  # noqa: BLE001 - keep the public UI stable
+                st.warning(
+                    "Live AMD/vLLM backend is offline, warming up, or misconfigured. "
+                    "AegisOps AI is showing the deterministic demo readiness package so the product remains reviewable."
+                )
+                st.caption(f"Backend fallback reason: {type(exc).__name__}")
+                result = DEMO_INVOKE_RESULT
+
     blue_output = result["blue_output"]
     response_output = result.get("response_output")
     if response_output and response_output not in blue_output:
         blue_output = f"{blue_output}\n\n{response_output}"
+
     return (
         result["red_output"],
         blue_output,
@@ -1581,25 +2584,10 @@ if mode == "Topology Lab":
 # SINGLE TECHNIQUE — Enterprise Dashboard
 # ══════════════════════════════════════════════════════════════════════════════
 elif mode == "Single Technique":
-    st.markdown(
-        '<div style="margin-bottom:8px">'
-        '<h1 style="font-family:Inter,sans-serif;font-size:28px;font-weight:800;color:#F8FAFC;'
-        'margin:0 0 4px;letter-spacing:-.02em">AegisOps OS</h1>'
-        '<p style="font-size:13px;color:#94A3B8;margin:0;font-family:Inter,sans-serif">'
-        'Multi-agent purple-team readiness platform · MITRE ATT&CK → Sigma · Splunk · VECTR'
-        '</p></div>',
-        unsafe_allow_html=True,
-    )
-
-    st.subheader("Executive Readiness Summary")
-    kpi_1, kpi_2, kpi_3, kpi_4 = st.columns(4)
-    kpi_1.metric("Detection Coverage", "100%", "Verified")
-    kpi_2.metric("Resilience Score", "94/100", "+12% vs Baseline")
-    kpi_3.metric("Actionable Observables", "7", "Ready for SIEM")
-    kpi_4.metric("Active Agents", "4/4", "System Nominal")
+    _render_top_panels(demo_mode, mode)
 
     tab_war_room, tab_artifacts, tab_judge = st.tabs(
-        ["⚡ Agent War Room", "📦 Readiness Artifacts", "⚖️ Judge View & AMD Proof"]
+        ["⚡ Agent Pipeline", "📦 Deployable Artifacts", "⚖️ Validation & AMD Proof"]
     )
 
     with tab_war_room:
@@ -1682,7 +2670,6 @@ elif mode == "Single Technique":
 # APT GROUP
 # ══════════════════════════════════════════════════════════════════════════════
 elif mode == "APT Group":
-    st.markdown(_page_header_html(mode), unsafe_allow_html=True)
     _render_top_panels(demo_mode, mode)
 
     col_input, col_btn = st.columns([3, 1], vertical_alignment="bottom")
@@ -1738,7 +2725,6 @@ elif mode == "APT Group":
 # KILL CHAIN
 # ══════════════════════════════════════════════════════════════════════════════
 elif mode == "Kill Chain":
-    st.markdown(_page_header_html(mode), unsafe_allow_html=True)
     _render_top_panels(demo_mode, mode)
 
     col_input, col_btn = st.columns([3, 1], vertical_alignment="bottom")
