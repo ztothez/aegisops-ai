@@ -1,0 +1,82 @@
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Environment secrets
+.env
+.env.local
+.env.*.local
+
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+.eggs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Streamlit
+.streamlit/
+
+# MITRE ATT&CK data (large downloaded file, ~44MB)
+enterprise-attack.json
+
+# Local hardware benchmark data
+assets/rocm_smi.json
+assets/rocm_benchmark.json
+
+# Presentation decks
+*.pptx
+
+# PDF/PNG exports in docs
+docs/*.pdf
+docs/*.png
+docs/design/
+
+# Claude / agent local cache
+.claude/
+
+# Local project/context notes
+PROJECT_CONTEXT.md
+cursor_ai*.md
+CURSOR_AI*.md
+
+# Local test artifacts
+test/
+tests/
+
+# SSH / local connection artifacts
+.known_hosts*
+known_hosts*
+
+# LibreOffice temporary lock files
+.~lock.*#
+**/.~lock.*#
+
+# Logs
+*.log
+logs/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Editor artifacts
+*.swp
+*.swo
+.idea/
+.vscode/settings.json
