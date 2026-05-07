@@ -138,23 +138,23 @@ detection:
   selection_process:
     CommandLine|contains:
       - <exact observable or command pattern from Red/Threat JSON>
-  selection_context_lineage:
+  selection_process_lineage:
     ParentImage|contains:
       - <exact parent process observable from Red/Threat JSON>
-  selection_context_file:
+  selection_file:
     TargetFilename|contains:
       - <exact file indicator from Red/Threat JSON>
-  selection_context_registry:
+  selection_registry:
     TargetObject|contains:
       - <exact registry indicator from Red/Threat JSON>
-  selection_context_network:
+  selection_network:
     DestinationHostname|contains:
       - <exact network indicator from Red/Threat JSON>
-  selection_context_authentication:
+  selection_authentication:
     AccountName|contains:
       - <exact authentication indicator from Red/Threat JSON>
   timeframe: <correlation_window from production_readiness when supported>
-  condition: selection_process and 1 of selection_context_*
+  condition: selection_process and 1 of selection_*
 falsepositives:
   - Legitimate administrative or testing activity
 level:
