@@ -688,5 +688,7 @@ DEMO_INVOKE_RESULT = {
     "blue_output": DEMO_BLUE_OUTPUT,
     "response_output": DEMO_RESPONSE_OUTPUT,
     "verifier_output": DEMO_VERIFIER_OUTPUT,
+    "verifier_model": "Qwen Validator Demo",
+    "verifier_model_role": "qwen",
     "metrics": DEMO_METRICS,
 }

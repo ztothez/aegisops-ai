@@ -120,6 +120,12 @@ export default function SOCCommandCenter() {
   const heroPillDot = endpointOk ? "bg-aegis-green shadow-[0_0_6px_#22C55E]" : "bg-aegis-amber shadow-[0_0_6px_#F59E0B]";
   const heroPillText = endpointOk ? `LIVE · VLLM ON ROCM · MI300X · ${modelName}` : "OFFLINE · DEMO FALLBACK ACTIVE";
 
+  const verifierModel = results?.verifier_model ?? "";
+  const verifierRole = results?.verifier_model_role ?? "";
+  const qwenAudited =
+    verifierModel.toLowerCase().includes("qwen") ||
+    verifierRole.toLowerCase().includes("qwen");
+
   // ── Sub-Component: Artifact Grid (Canonical Naming) ────────────────────────
   const ArtifactGridComponent = ({ run }: { run: RunResult }) => {
     // Generate canonical file prefix
@@ -449,7 +455,17 @@ export default function SOCCommandCenter() {
         {/* LATEST REPORT HERO CARD */}
         <div className="bg-gradient-to-br from-aegis-panel-3 to-aegis-panel border border-aegis-border-purple rounded-xl p-6 mb-6 shadow-aegis-card relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-10 font-mono font-bold text-8xl text-aegis-purple">RPT</div>
-          <div className="font-sans font-bold text-[10px] leading-none text-aegis-purple-soft tracking-[0.14em] uppercase mb-4">▸ Latest Generated Report</div>
+                    <div className="flex items-center gap-2 mb-4">
+            <div className="font-sans font-bold text-[10px] leading-none text-aegis-purple-soft tracking-[0.14em] uppercase">
+              ▸ Latest Generated Report
+            </div>
+
+            {qwenAudited && (
+              <div className="inline-flex items-center rounded border border-aegis-border-purple bg-aegis-tint-purple px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-aegis-purple-soft">
+                Audited by {verifierModel}
+              </div>
+            )}
+          </div>
           
           <div className="flex justify-between items-start">
             <div>
@@ -673,7 +689,7 @@ export default function SOCCommandCenter() {
           { id: "red", label: "Threat Agent", model: "Llama 3.3 70B", top: "border-t-aegis-purple", text: "text-aegis-purple-soft", route: "primary" },
           { id: "blue", label: "Detection Agent", model: "Llama 3.3 70B", top: "border-t-aegis-blue", text: "text-aegis-blue-soft", route: "primary" },
           { id: "response", label: "Response Agent", model: "Llama 3.3 70B", top: "border-t-aegis-amber", text: "text-aegis-amber-soft", route: "primary" },
-          { id: "verifier", label: "Validation Agent", model: "Qwen / QwQ", top: "border-t-aegis-purple", text: "text-aegis-purple-soft", route: "qwen_validator" },
+          { id: "verifier", label: "Validation Agent", model: qwenAudited ? verifierModel : "Qwen-ready Validator", top: "border-t-aegis-purple", text: "text-aegis-purple-soft", route: qwenAudited ? "qwen_validator" : "validator_ready" },
         ].map((agent, i) => {
           const isRunning = activeAgent === agent.id;
           const elapsed = agentTimes[agent.id];

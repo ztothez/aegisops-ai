@@ -104,6 +104,8 @@ def _build_response(result: dict, tid: str) -> dict:
     return {
         "status": "success",
         "technique_id": tid,
+        "verifier_model": result.get("verifier_model", "Unknown verifier model"),
+        "verifier_model_role": result.get("verifier_model_role", "unknown"),
         "outputs": {
             "red": red,
             "blue": blue,
@@ -163,16 +165,31 @@ async def _stream_demo(technique_id: str) -> AsyncIterator[str]:
         ("response", "response_output", "Response Agent",   2.4),
         ("verifier", "verifier_output", "Validation Agent", 1.9),
     ]
-    yield _sse("start", {"demo": True, "technique_id": technique_id,
-                         "pipeline_version": "aegisops-production-hybrid-v1"})
+    yield _sse("start", {
+        "demo": True,
+        "technique_id": technique_id,
+        "pipeline_version": "aegisops-production-hybrid-v1",
+    })
+
     for key, field, label, delay in stages:
         yield _sse("agent_start", {"agent": key, "label": label})
         await asyncio.sleep(delay)
-        yield _sse("agent_done", {"agent": key, "label": label, "output": result.get(field, "")})
-    
+        yield _sse("agent_done", {
+            "agent": key,
+            "label": label,
+            "output": result.get(field, ""),
+        })
+
     full = _build_response(result, technique_id)
-    yield _sse("done", {"demo": True, "metrics": full["metrics"],
-                        "artifacts": full["artifacts"], "scores": full["scores"]})
+    yield _sse("done", {
+        "demo": True,
+        "metrics": full["metrics"],
+        "artifacts": full["artifacts"],
+        "scores": full["scores"],
+        "verifier_model": full.get("verifier_model"),
+        "verifier_model_role": full.get("verifier_model_role"),
+    })
+
 
 def _run_node(node_name: str, state: dict) -> dict:
     from agents.red_agent import run_red_agent
@@ -226,8 +243,14 @@ async def _stream_live(technique_id: str, mode: str) -> AsyncIterator[str]:
         all_results.append(state)
         # Yield a sub-completion for multi-technique chains
         full_sub = _build_response(state, tid)
-        yield _sse("done", {"demo": False, "metrics": full_sub["metrics"],
-                            "artifacts": full_sub["artifacts"], "scores": full_sub["scores"]})
+        yield _sse("done", {
+            "demo": False,
+            "metrics": full_sub["metrics"],
+            "artifacts": full_sub["artifacts"],
+            "scores": full_sub["scores"],
+            "verifier_model": full_sub.get("verifier_model"),
+            "verifier_model_role": full_sub.get("verifier_model_role"),
+        })
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 @api.post("/run")

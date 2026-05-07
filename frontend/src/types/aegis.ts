@@ -10,6 +10,8 @@ export interface Scores {
 
 export interface RunResult {
   technique_id: string; mode: string;
+  verifier_model?: string;
+  verifier_model_role?: string;
   scores: Scores;
   outputs: { red: string; blue: string; response: string; verifier: string };
   artifacts: { sigma: string; splunk: string; raw_red: string; raw_blue: string };

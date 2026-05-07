@@ -18,7 +18,12 @@ Verify whether high-fidelity red-team artifacts are covered by detection and res
 """),
     ]
     content, metric = invoke_with_metrics(chat, messages, "verifier_agent")
+    verifier_model = metric.get("model") or "Unknown verifier model"
+    verifier_model_role = metric.get("model_role") or metric.get("requested_role") or "unknown"
+
     return {
         "verifier_output": content,
+        "verifier_model": verifier_model,
+        "verifier_model_role": verifier_model_role,
         "metrics": merge_metrics(state, metric),
     }
