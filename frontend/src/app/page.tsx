@@ -4,7 +4,7 @@ import Sidebar from "../components/Sidebar";
 import { PanelEyebrow, MetaRow, GateBadge } from "../components/SharedUI";
 import { RunStatus, SidebarView, RunResult, Health } from "../types/aegis";
 
-const API = "http://localhost:8000";
+const API = "";
 function ts() { return new Date().toISOString().substring(11, 19) + "Z"; }
 
 // Instant, stateless file download from React memory
@@ -418,7 +418,7 @@ export default function SOCCommandCenter() {
           setTechnique(intelInput); 
           setActiveView("overview"); 
           runPipeline("APT Group", intelInput); 
-        }} className="px-5 rounded-md bg-gradient-to-br from-aegis-purple-deep to-[#4F46E5] border border-aegis-purple/50 text-white font-sans font-bold text-[11px] leading-none tracking-[0.08em] uppercase cursor-pointer hover:shadow-aegis-hover transition-shadow">
+        }} className="px-5 rounded-md bg-gradient-to-br from-[#7C3AED] to-[#4F46E5] border border-aegis-purple/50 text-white font-sans font-bold text-[11px] leading-none tracking-[0.08em] uppercase cursor-pointer hover:shadow-aegis-hover transition-shadow">
           Run APT Simulation
         </button>
       </div>
