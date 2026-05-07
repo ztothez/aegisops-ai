@@ -7,6 +7,9 @@ env/
 .env
 .env.local
 .env.*.local
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
 
 # Python bytecode / caches
 __pycache__/
@@ -29,8 +32,32 @@ build/
 htmlcov/
 .tox/
 
-# Streamlit
+# Streamlit legacy
 .streamlit/
+
+# Node / Next.js frontend
+node_modules/
+frontend/node_modules/
+.next/
+frontend/.next/
+out/
+frontend/out/
+.vercel/
+frontend/.vercel/
+.turbo/
+frontend/.turbo/
+
+# Next.js / TypeScript artifacts
+next-env.d.ts
+frontend/next-env.d.ts
+*.tsbuildinfo
+frontend/*.tsbuildinfo
+
+# Package manager logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # Presentation decks
 *.pptx
@@ -39,6 +66,14 @@ htmlcov/
 docs/*.pdf
 docs/*.png
 docs/design/
+
+# Generated AegisOps exports
+sigma_*.yml
+splunk_*.spl
+vectr_*.json
+validation_*.json
+aegisops_*.pdf
+report_*.pdf
 
 # Claude / agent local cache
 .claude/
