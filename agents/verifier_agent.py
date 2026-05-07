@@ -4,7 +4,7 @@ from agents.llm import build_chat, invoke_with_metrics, merge_metrics
 
 
 def run_verifier_agent(state):
-    chat = build_chat()
+    chat = build_chat(role="validator")
     messages = [
         SystemMessage(content=VALIDATION_SYSTEM_PROMPT),
         HumanMessage(content=f"""

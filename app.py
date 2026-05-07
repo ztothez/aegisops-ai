@@ -523,7 +523,6 @@ def _panel_header(side: str, technique_id: str = "") -> str:
         f'{badge}</div>'
     )
 
-
 def _verifier_html(verifier_output: str) -> str:
     try:
         match = re.search(r'```json\s*(.*?)\s*```', verifier_output, re.DOTALL)

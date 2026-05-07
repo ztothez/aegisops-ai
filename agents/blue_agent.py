@@ -4,7 +4,7 @@ from agents.llm import build_chat, invoke_with_metrics, merge_metrics
 
 
 def run_blue_agent(state):
-    chat = build_chat()
+    chat = build_chat(role="detection")
     messages = [
         SystemMessage(content=BLUE_SYSTEM_PROMPT),
         HumanMessage(content=f"""

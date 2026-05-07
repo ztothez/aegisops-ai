@@ -24,6 +24,46 @@ load_dotenv()
 REQUIRED_ENV_VARS = ("VLLM_BASE_URL", "VLLM_API_KEY", "MODEL_NAME")
 
 
+def _env(name: str, default: str | None = None) -> str | None:
+    value = os.getenv(name)
+    return value if value not in (None, "") else default
+
+
+def _primary_config() -> dict:
+    return {
+        "base_url": _env("PRIMARY_BASE_URL", _env("VLLM_BASE_URL")),
+        "api_key": _env("PRIMARY_API_KEY", _env("VLLM_API_KEY", "EMPTY")),
+        "model": _env("PRIMARY_MODEL", _env("MODEL_NAME")),
+        "role": "primary",
+    }
+
+
+def _qwen_config() -> dict:
+    return {
+        "base_url": _env("QWEN_BASE_URL"),
+        "api_key": _env("QWEN_API_KEY", "EMPTY"),
+        "model": _env("QWEN_MODEL_NAME"),
+        "role": "qwen",
+    }
+
+
+def _select_model_config(role: str | None = None) -> dict:
+    mode = (_env("MODEL_MODE", "llama") or "llama").lower()
+    role_name = (role or "generator").lower()
+
+    primary = _primary_config()
+    qwen = _qwen_config()
+    qwen_ready = bool(qwen.get("base_url") and qwen.get("model"))
+
+    if mode == "qwen" and qwen_ready:
+        return qwen
+
+    if mode == "hybrid" and role_name in {"validator", "validation", "verifier"} and qwen_ready:
+        return qwen
+
+    return primary
+
+
 class LiveHealth(TypedDict, total=False):
     reachable: bool
     base_url: Optional[str]
@@ -33,30 +73,67 @@ class LiveHealth(TypedDict, total=False):
 
 
 def has_live_llm_config() -> bool:
-    """True only when every variable required for live AMD/ROCm inference is set."""
-    return all(os.getenv(name) for name in REQUIRED_ENV_VARS)
+    cfg = _primary_config()
+    return bool(cfg.get("base_url") and cfg.get("api_key") and cfg.get("model"))
 
 
-def build_chat() -> ChatOpenAI:
-    """Construct the OpenAI-compatible client pointed at the live vLLM server.
+def build_chat(role: str | None = None) -> ChatOpenAI:
+    cfg = _select_model_config(role)
 
-    Raises a clear runtime error when the AMD/vLLM secrets are not configured so
-    Streamlit can fall back to Demo Mode without crashing on import.
-    """
-    missing = [name for name in REQUIRED_ENV_VARS if not os.getenv(name)]
+    missing = [
+        name for name, value in {
+            "base_url": cfg.get("base_url"),
+            "api_key": cfg.get("api_key"),
+            "model": cfg.get("model"),
+        }.items()
+        if not value
+    ]
+
     if missing:
         raise RuntimeError(
             "Live AMD/vLLM inference is not configured. "
-            f"Missing environment variables: {', '.join(missing)}. "
-            "Enable Demo Mode or configure these variables in the Space secrets."
+            f"Missing fields for role={role or 'default'}: {', '.join(missing)}. "
+            "Enable Demo Mode or configure VLLM/PRIMARY/QWEN environment variables."
         )
-    return ChatOpenAI(
-        base_url=os.getenv("VLLM_BASE_URL"),
-        api_key=os.getenv("VLLM_API_KEY"),
-        model=os.getenv("MODEL_NAME"),
+
+    chat = ChatOpenAI(
+        base_url=cfg["base_url"],
+        api_key=cfg["api_key"],
+        model=cfg["model"],
         temperature=0.2,
     )
 
+    setattr(chat, "_aegisops_model_role", cfg.get("role"))
+    setattr(chat, "_aegisops_requested_role", role or "default")
+    setattr(chat, "_aegisops_base_url", cfg.get("base_url"))
+
+    return chat
+
+def get_model_routing_status() -> dict:
+    mode = (_env("MODEL_MODE", "llama") or "llama").lower()
+    primary = _primary_config()
+    qwen = _qwen_config()
+    qwen_ready = bool(qwen.get("base_url") and qwen.get("model"))
+
+    return {
+        "model_mode": mode,
+        "primary": {
+            "configured": bool(primary.get("base_url") and primary.get("model")),
+            "base_url": primary.get("base_url"),
+            "model": primary.get("model"),
+        },
+        "qwen": {
+            "configured": qwen_ready,
+            "base_url": qwen.get("base_url"),
+            "model": qwen.get("model"),
+        },
+        "routes": {
+            "threat": "qwen" if mode == "qwen" and qwen_ready else "primary",
+            "detection": "qwen" if mode == "qwen" and qwen_ready else "primary",
+            "response": "qwen" if mode == "qwen" and qwen_ready else "primary",
+            "validator": "qwen" if mode in {"qwen", "hybrid"} and qwen_ready else "primary",
+        },
+    }
 
 def live_health(timeout_s: float = 4.0) -> LiveHealth:
     """Ping the live vLLM /models endpoint and report reachability + latency.
@@ -65,9 +142,10 @@ def live_health(timeout_s: float = 4.0) -> LiveHealth:
     raises - failures are folded into the ``reachable`` flag and ``error`` field
     so the status panel can stay informative without breaking the app.
     """
-    base_url = os.getenv("VLLM_BASE_URL")
-    api_key = os.getenv("VLLM_API_KEY")
-    model = os.getenv("MODEL_NAME")
+    cfg = _primary_config()
+    base_url = cfg.get("base_url")
+    api_key = cfg.get("api_key")
+    model = cfg.get("model")
 
     if not base_url or not model:
         return LiveHealth(
@@ -75,7 +153,7 @@ def live_health(timeout_s: float = 4.0) -> LiveHealth:
             base_url=base_url,
             model=model,
             latency_ms=None,
-            error="VLLM_BASE_URL or MODEL_NAME is not configured",
+            error="Primary live model endpoint or model name is not configured",
         )
 
     url = base_url.rstrip("/") + "/models"
@@ -123,6 +201,9 @@ class AgentMetric(TypedDict, total=False):
     completion_tokens: int
     total_tokens: int
     model: Optional[str]
+    model_role: Optional[str]
+    requested_role: Optional[str]
+    base_url: Optional[str]
 
 
 def _extract_token_usage(message: Any) -> dict:
@@ -171,6 +252,9 @@ def invoke_with_metrics(
         "agent": agent_name,
         "latency_ms": latency_ms,
         "model": getattr(chat, "model_name", None) or os.getenv("MODEL_NAME"),
+        "model_role": getattr(chat, "_aegisops_model_role", None),
+        "requested_role": getattr(chat, "_aegisops_requested_role", None),
+        "base_url": getattr(chat, "_aegisops_base_url", None),
         "prompt_tokens": int(usage.get("prompt_tokens", 0)),
         "completion_tokens": int(usage.get("completion_tokens", 0)),
         "total_tokens": int(usage.get("total_tokens", 0)),

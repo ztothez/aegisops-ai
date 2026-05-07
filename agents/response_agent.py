@@ -4,7 +4,7 @@ from agents.llm import build_chat, invoke_with_metrics, merge_metrics
 
 
 def run_response_agent(state):
-    chat = build_chat()
+    chat = build_chat(role="response")
     messages = [
         SystemMessage(content=RESPONSE_SYSTEM_PROMPT),
         HumanMessage(content=f"""
