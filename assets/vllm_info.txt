@@ -1,0 +1,10 @@
+captured_at:   2026-05-07T08:46:49Z
+host:          134.199.193.16
+endpoint:      http://134.199.193.16:8000/v1
+model:         meta-llama/Llama-3.3-70B-Instruct
+vllm_version:  WARNING 05-07 08:46:47 [gpt_oss_triton_kernels_moe.py:56] Using legacy triton_kernels on ROCm
+0.17.1+rocm700
+vllm-installed
+container:     rocm
+runtime:       ROCm container, vLLM OpenAI-compatible server
+gpu:           AMD Instinct MI300X / ROCm environment

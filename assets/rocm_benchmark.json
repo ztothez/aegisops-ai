@@ -1,0 +1,21 @@
+{
+  "captured_at": "2026-05-05T10:39:51.802536+00:00",
+  "endpoint": "http://134.199.199.167:8000/v1",
+  "model": "meta-llama/Llama-3.3-70B-Instruct",
+  "runtime": "vLLM on ROCm container",
+  "gpu": "AMD Instinct MI300X (AMD Developer Cloud)",
+  "concurrency": 4,
+  "requests": 12,
+  "successful": 12,
+  "failed": 0,
+  "wall_clock_seconds": 14.278,
+  "latency_ms_p50": 4723.18,
+  "latency_ms_p95": 4892.34,
+  "latency_ms_avg": 4530.48,
+  "latency_ms_min": 3307.13,
+  "latency_ms_max": 5007.29,
+  "tokens_per_second": 89.09,
+  "completion_tokens_total": 1272,
+  "total_tokens": 2268,
+  "prompt": "You are a senior detection engineer. In two short sentences, summarize how a Sigma rule for MITRE ATT&CK T1059.001 (PowerShell) should reason about parent process lineage and command-line obfuscation. Be concrete."
+}
