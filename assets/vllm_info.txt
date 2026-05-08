@@ -1,10 +1,13 @@
-captured_at:   2026-05-07T08:46:49Z
-host:          134.199.193.16
-endpoint:      http://134.199.193.16:8000/v1
-model:         meta-llama/Llama-3.3-70B-Instruct
-vllm_version:  WARNING 05-07 08:46:47 [gpt_oss_triton_kernels_moe.py:56] Using legacy triton_kernels on ROCm
+captured_at:       2026-05-08T10:00:33Z
+host:              165.245.130.247
+mode:              llama
+primary_endpoint:  http://165.245.130.247:8000/v1
+primary_model:     meta-llama/Llama-3.3-70B-Instruct
+qwen_endpoint:     http://165.245.130.247:8001/v1
+qwen_model:        Qwen/Qwen2.5-7B-Instruct
+vllm_version:      WARNING 05-08 10:00:30 [gpt_oss_triton_kernels_moe.py:56] Using legacy triton_kernels on ROCm
 0.17.1+rocm700
 vllm-installed
-container:     rocm
-runtime:       ROCm container, vLLM OpenAI-compatible server
-gpu:           AMD Instinct MI300X / ROCm environment
+container:         rocm
+runtime:           ROCm container, vLLM OpenAI-compatible server
+gpu:               AMD Instinct MI300X / ROCm environment
