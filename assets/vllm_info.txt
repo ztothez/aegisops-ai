@@ -1,13 +1,14 @@
-captured_at:       2026-05-08T10:00:33Z
-host:              165.245.130.247
-mode:              llama
-primary_endpoint:  http://165.245.130.247:8000/v1
+captured_at:       2026-05-08T13:00:00Z
+host:              134.199.202.62
+mode:              hybrid
+primary_endpoint:  http://134.199.202.62:8000/v1
 primary_model:     meta-llama/Llama-3.3-70B-Instruct
-qwen_endpoint:     http://165.245.130.247:8001/v1
-qwen_model:        Qwen/Qwen2.5-7B-Instruct
-vllm_version:      WARNING 05-08 10:00:30 [gpt_oss_triton_kernels_moe.py:56] Using legacy triton_kernels on ROCm
-0.17.1+rocm700
-vllm-installed
+primary_context:   8192
+qwen_endpoint:     http://134.199.202.62:8001/v1
+qwen_model:        Qwen/Qwen2.5-3B-Instruct
+qwen_context:      8192
+vllm_version:      0.17.1+rocm700
 container:         rocm
 runtime:           ROCm container, vLLM OpenAI-compatible server
 gpu:               AMD Instinct MI300X / ROCm environment
+notes:             Llama handles threat, detection, and response agents. Qwen handles validation sidecar routing.
