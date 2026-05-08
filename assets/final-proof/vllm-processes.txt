@@ -1,0 +1,4 @@
+    642       1 bash -lc mkdir -p /tmp/aegisops-vllm && nohup vllm serve Qwen/Qwen2.5-3B-Instruct \     --host 0.0.0.0 \     --port 8001 \     --dtype float16 \     --gpu-memory-utilization 0.08 \     --max-model-len 8192 \     --enforce-eager \     > /tmp/aegisops-vllm/qwen-vllm.log 2>&1 &
+    644     642 /usr/bin/python /usr/local/bin/vllm serve Qwen/Qwen2.5-3B-Instruct --host 0.0.0.0 --port 8001 --dtype float16 --gpu-memory-utilization 0.08 --max-model-len 8192 --enforce-eager
+    874       1 bash -lc mkdir -p /tmp/aegisops-vllm && nohup vllm serve meta-llama/Llama-3.3-70B-Instruct \     --host 0.0.0.0 \     --port 8000 \     --dtype float16 \     --gpu-memory-utilization 0.88 \     --max-model-len 8192 \     > /tmp/aegisops-vllm/llama-vllm.log 2>&1 &
+    876     874 /usr/bin/python /usr/local/bin/vllm serve meta-llama/Llama-3.3-70B-Instruct --host 0.0.0.0 --port 8000 --dtype float16 --gpu-memory-utilization 0.88 --max-model-len 8192

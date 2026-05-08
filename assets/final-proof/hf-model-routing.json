@@ -1,0 +1,1 @@
+{"model_mode":"hybrid","primary":{"configured":true,"base_url":"http://134.199.202.62:8000/v1","model":"meta-llama/Llama-3.3-70B-Instruct"},"qwen":{"configured":true,"base_url":"http://134.199.202.62:8001/v1","model":"Qwen/Qwen2.5-3B-Instruct"},"routes":{"threat":"primary","detection":"primary","response":"primary","validator":"qwen"}}
