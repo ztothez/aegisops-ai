@@ -205,16 +205,24 @@ def _run_node(node_name: str, state: dict) -> dict:
 
 async def _stream_live(technique_id: str, mode: str) -> AsyncIterator[str]:
     techniques = _resolve_techniques(mode, technique_id)
-    yield _sse("start", {"demo": False, "technique_id": technique_id, "mode": mode,
-                         "techniques": techniques,
-                         "pipeline_version": "aegisops-production-hybrid-v1"})
+    yield _sse("start", {
+        "demo": False,
+        "technique_id": technique_id,
+        "mode": mode,
+        "techniques": techniques,
+        "pipeline_version": "aegisops-production-hybrid-v1",
+    })
 
     all_results = []
     loop = asyncio.get_event_loop()
 
     for i, tid in enumerate(techniques):
         if len(techniques) > 1:
-            yield _sse("technique_start", {"technique_id": tid, "index": i, "total": len(techniques)})
+            yield _sse("technique_start", {
+                "technique_id": tid,
+                "index": i,
+                "total": len(techniques),
+            })
 
         agent_order = [
             ("red_agent",      "red",      "red_output",      "Threat Agent"),
@@ -225,32 +233,94 @@ async def _stream_live(technique_id: str, mode: str) -> AsyncIterator[str]:
         state: dict = {"technique_id": tid}
 
         for node_name, key, field, label in agent_order:
-            yield _sse("agent_start", {"agent": key, "label": label, "technique_id": tid})
+            yield _sse("agent_start", {
+                "agent": key,
+                "label": label,
+                "technique_id": tid,
+            })
             try:
                 result = await loop.run_in_executor(
                     None, lambda s=state, n=node_name: _run_node(n, s)
                 )
                 state.update(result)
                 yield _sse("agent_done", {
-                    "agent": key, "label": label,
+                    "agent": key,
+                    "label": label,
                     "output": state.get(field, ""),
                     "technique_id": tid,
                 })
             except Exception as exc:
-                yield _sse("agent_error", {"agent": key, "label": label, "error": str(exc), "technique_id": tid})
+                yield _sse("agent_error", {
+                    "agent": key,
+                    "label": label,
+                    "error": str(exc),
+                    "technique_id": tid,
+                })
+                # Yield error done so frontend doesn't hang
+                yield _sse("done", {
+                    "demo": False,
+                    "error": str(exc),
+                    "metrics": {},
+                    "artifacts": {"sigma": "", "splunk": "", "raw_red": "", "raw_blue": ""},
+                    "scores": {
+                        "coverage": 0, "product_readiness": 0, "real_world": 0,
+                        "safety_verdict": "FAIL", "verdict": "FAIL",
+                        "covered_observables": [], "missing_observables": [],
+                        "production_gaps": [], "improvement_suggestions": [],
+                    },
+                    "verifier_model": None,
+                    "verifier_model_role": None,
+                })
                 return
 
         all_results.append(state)
-        # Yield a sub-completion for multi-technique chains
-        full_sub = _build_response(state, tid)
-        yield _sse("done", {
-            "demo": False,
-            "metrics": full_sub["metrics"],
-            "artifacts": full_sub["artifacts"],
-            "scores": full_sub["scores"],
-            "verifier_model": full_sub.get("verifier_model"),
-            "verifier_model_role": full_sub.get("verifier_model_role"),
-        })
+
+        # For multi-technique modes, yield a progress event (NOT done)
+        # so the frontend knows this technique finished without stopping
+        if len(techniques) > 1:
+            sub = _build_response(state, tid)
+            yield _sse("technique_done", {
+                "technique_id": tid,
+                "index": i,
+                "total": len(techniques),
+                "scores": sub["scores"],
+                "artifacts": sub["artifacts"],
+                "metrics": sub["metrics"],
+                "verifier_model": sub.get("verifier_model"),
+                "verifier_model_role": sub.get("verifier_model_role"),
+            })
+
+    # Single final done event — always fires exactly once
+    if not all_results:
+        return
+
+    # For single technique, use its result directly
+    # For multi-technique, merge outputs for the final payload
+    if len(all_results) == 1:
+        final = _build_response(all_results[0], techniques[0])
+    else:
+        # Merge: concatenate red/blue outputs, use last verifier scores
+        merged_red = "\n\n---\n\n".join(
+            r.get("red_output", "") for r in all_results
+        )
+        merged_blue = "\n\n---\n\n".join(
+            r.get("blue_output", "") for r in all_results
+        )
+        # Use the last result's verifier for overall scores
+        last = all_results[-1]
+        last["red_output"] = merged_red
+        last["blue_output"] = merged_blue
+        final = _build_response(last, technique_id)
+
+    yield _sse("done", {
+        "demo": False,
+        "metrics": final["metrics"],
+        "artifacts": final["artifacts"],
+        "scores": final["scores"],
+        "verifier_model": final.get("verifier_model"),
+        "verifier_model_role": final.get("verifier_model_role"),
+        "techniques_completed": [r.get("technique_id", "") for r in all_results],
+    })
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 @api.post("/run")
