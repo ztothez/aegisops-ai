@@ -16,6 +16,42 @@ function dl(filename: string, content: string) {
   URL.revokeObjectURL(a.href);
 }
 
+async function downloadPdf(run: RunResult, canonicalId?: string) {
+  const id = canonicalId || run.technique_id;
+
+  const r = await fetch(`${API}/export/pdf`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      technique_id: id,
+      red_output: run.outputs?.red ?? run.artifacts?.raw_red ?? "",
+      blue_output: run.outputs?.blue ?? run.artifacts?.raw_blue ?? "",
+      response_output: run.outputs?.response ?? "",
+      verifier_output: run.outputs?.verifier ?? "",
+      scores: run.scores,
+      artifacts: run.artifacts,
+      verifier_model: run.verifier_model,
+      verifier_model_role: run.verifier_model_role,
+    }),
+  });
+
+  if (!r.ok) {
+    console.error("PDF export failed", r.status, await r.text());
+    return;
+  }
+
+  const blob = await r.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `aegisops_${id}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+
 export default function SOCCommandCenter() {
   // Shared App State
   const [technique, setTechnique] = useState("T1059.001");
@@ -194,16 +230,7 @@ export default function SOCCommandCenter() {
             <button
               onClick={async () => {
                 if (art.label === "PDF REPORT") {
-                  const r = await fetch(`${API}/export/pdf`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ technique_id: canonicalId, red_output: run.outputs.red, blue_output: run.outputs.blue }),
-                  });
-                  const blob = await r.blob();
-                  const a = document.createElement("a");
-                  a.href = URL.createObjectURL(blob);
-                  a.download = art.filename;
-                  a.click();
+                  await downloadPdf(run, canonicalId);
                 } else {
                   dl(art.filename, typeof art.content === "string" ? art.content : JSON.stringify(art.content));
                 }
@@ -564,18 +591,7 @@ export default function SOCCommandCenter() {
               </div>
             </div>
             <button
-              onClick={async () => {
-                const r = await fetch(`${API}/export/pdf`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ technique_id: canonicalId, red_output: latestRun.outputs.red, blue_output: latestRun.outputs.blue }),
-                });
-                const blob = await r.blob();
-                const a = document.createElement("a");
-                a.href = URL.createObjectURL(blob);
-                a.download = `aegisops_${canonicalId}.pdf`;
-                a.click();
-              }}
+              onClick={() => downloadPdf(latestRun, canonicalId)}
               className="mt-2 px-6 py-3 bg-gradient-to-br from-[#7C3AED] to-[#4F46E5] text-white rounded-lg font-sans text-xs font-bold uppercase tracking-[0.08em] hover:scale-[1.02] transition-transform"
             >
               ↓ Download PDF
@@ -596,18 +612,7 @@ export default function SOCCommandCenter() {
                     <div className="font-mono font-normal text-[10px] text-aegis-fg-dim">{new Date(run.timestamp).toLocaleString()}</div>
                   </div>
                   <button
-                    onClick={async () => {
-                      const r = await fetch(`${API}/export/pdf`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ technique_id: cid, red_output: run.outputs.red, blue_output: run.outputs.blue }),
-                      });
-                      const blob = await r.blob();
-                      const a = document.createElement("a");
-                      a.href = URL.createObjectURL(blob);
-                      a.download = `aegisops_${cid}.pdf`;
-                      a.click();
-                    }}
+                    onClick={() => downloadPdf(run, cid)}
                     className="text-aegis-fg-muted hover:text-aegis-purple-soft font-sans text-[10px] font-bold uppercase tracking-[0.08em] transition-colors"
                   >
                     ↓ PDF
