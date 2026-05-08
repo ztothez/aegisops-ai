@@ -562,7 +562,6 @@ export default function SOCCommandCenter() {
       <div className="flex-1 px-[22px] py-[18px] pb-8 overflow-y-auto">
         <div className="font-sans font-bold text-[11px] leading-none tracking-[0.14em] uppercase text-aegis-fg-dim mb-[18px]">▤ REPORTS — Pipeline Run Reports</div>
         <div className="bg-gradient-to-br from-aegis-panel-3 to-aegis-panel border border-aegis-border-purple rounded-xl p-6 mb-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-10 font-mono font-bold text-8xl text-aegis-purple">RPT</div>
           <div className="flex items-center gap-2 mb-4">
             <div className="font-sans font-bold text-[10px] leading-none text-aegis-purple-soft tracking-[0.14em] uppercase">▸ Latest Generated Report</div>
             {qwenAudited && (
