@@ -6,7 +6,7 @@ colorTo: red
 sdk: docker
 app_port: 7860
 pinned: false
-license: mit
+license: other
 ---
 
 # AegisOps AI
